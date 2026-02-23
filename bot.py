@@ -39,10 +39,10 @@ def choose_problem(call):
 
     markup = types.InlineKeyboardMarkup()
     problems = [
-        "Касса",
+        "1С/Касса",
         "Компьютер",
         "Интернет",
-        "1С",
+        "Освещение",
         "Другое"
     ]
 
@@ -116,3 +116,4 @@ def send_request(user_id):
 
 print("Бот запущен...")
 bot.infinity_polling()
+
