@@ -17,6 +17,10 @@ request_counter = 1
 # ===== START MENU =====
 @bot.message_handler(commands=['start'])
 def start(message):
+
+    if message.chat.type != "private":
+        return
+
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("Создать заявку")
 
@@ -25,7 +29,6 @@ def start(message):
         "👋 Нажмите кнопку ниже:",
         reply_markup=markup
     )
-
 # ===== CREATE REQUEST =====
 @bot.message_handler(func=lambda m: m.text == "Создать заявку")
 def choose_pharmacy(message):
@@ -113,14 +116,16 @@ def handle_text(message):
         )
 
 # ===== PHOTO HANDLER =====
-@bot.message_handler(content_types=["photo"])
+@bot.message_handler(content_types=['photo'])
 def handle_photo(message):
 
     user_id = message.from_user.id
 
     if user_id in user_state and user_state[user_id] == "wait_photo":
 
-        user_data[user_id]["photo"] = message.photo[-1].file_id
+        photo_id = message.photo[-1].file_id
+
+        user_data[user_id]["photo"] = photo_id
 
         send_request(user_id)
 
@@ -146,8 +151,18 @@ def send_request(user_id):
     global request_counter
 
     data = user_data[user_id]
+    
+   username = data.get("username")
 
-    time_now = datetime.now().strftime("%Y-%m-%d %H:%M")
+if not username:
+    username = data.get("username", "")
+
+if not username:
+    username = ""
+else:
+    username = "@" + username
+
+    time_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     username = data.get("username", "")
 
@@ -156,21 +171,19 @@ def send_request(user_id):
 
 🏪 Аптека: {data['pharmacy']}
 🔧 Тип: {data['problem']}
-👤 Пользователь: @{username}
-
+👤 Пользователь: {username}
 📝 {data['description']}
-
 🕒 {time_now}
 """
 
-    if data.get("photo"):
-        bot.send_photo(
-            GROUP_ID,
-            data["photo"],
-            caption=text
-        )
-    else:
-        bot.send_message(GROUP_ID, text)
+   if data.get("photo") is not None:
+    bot.send_photo(
+        GROUP_ID,
+        data["photo"],
+        caption=text
+    )
+else:
+    bot.send_message(GROUP_ID, text)
 
     request_counter += 1
 
@@ -180,3 +193,4 @@ def send_request(user_id):
 # ===== RUN =====
 print("Bot running...")
 bot.infinity_polling(timeout=60, long_polling_timeout=60)
+
