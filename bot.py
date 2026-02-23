@@ -80,6 +80,11 @@ def handle_text(message):
         user_data[message.from_user.id]["description"] = message.text
         user_data[message.from_user.id]["photo"] = None
 
+        bot.send_message(message.chat.id, "Отправьте фото (если нужно) или напишите /done для отправки заявки")
+
+       @bot.message_handler(commands=['done'])
+def finish_request(message):
+    if message.from_user.id in user_data:
         send_request(message.from_user.id)
         bot.send_message(message.chat.id, "✅ Заявка отправлена")
 
@@ -89,8 +94,7 @@ def handle_text(message):
 def handle_photo(message):
     if message.from_user.id in user_data:
         user_data[message.from_user.id]["photo"] = message.photo[-1].file_id
-        send_request(message.from_user.id)
-        bot.send_message(message.chat.id, "✅ Заявка отправлена с фото")
+        bot.send_message(message.chat.id, "Фото добавлено. Напишите /done для отправки заявки")
 
 
 def send_request(user_id):
@@ -98,13 +102,25 @@ def send_request(user_id):
 
     data = user_data[user_id]
 
-    text = (
-        f"📌 Заявка №{request_counter}\n"
-        f"Аптека: {data['pharmacy']}\n"
-        f"Тип: {data['problem']}\n"
-        f"Описание: {data['description']}"
-    )
+from datetime import datetime
 
+user_info = bot.get_chat(user_id)
+
+if user_info.username:
+    username = "@" + user_info.username
+else:
+    username = user_info.first_name
+
+time_now = datetime.now().strftime("%d.%m.%Y %H:%M")
+
+   text = (
+    f"📌 Заявка №{request_counter}\n"
+    f"👤 От: {username}\n"
+    f"🕒 Дата: {time_now}\n"
+    f"Аптека: {data['pharmacy']}\n"
+    f"Тип: {data['problem']}\n"
+    f"Описание: {data['description']}"
+)
     if data["photo"]:
         bot.send_photo(GROUP_ID, data["photo"], caption=text)
     else:
@@ -116,4 +132,5 @@ def send_request(user_id):
 
 print("Бот запущен...")
 bot.infinity_polling()
+
 
