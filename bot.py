@@ -2,7 +2,7 @@ import telebot
 from telebot import types
 from datetime import datetime
 
-TOKEN = "ТВОЙ_ТОКЕН"
+TOKEN = "8273823469:AAETywYPcSdUrkM9H9z2ySe1KN8HNWsN1QM"
 GROUP_ID = -1003783425494
 
 bot = telebot.TeleBot(TOKEN)
@@ -133,3 +133,4 @@ def send_request(user_id, message):
 
 print("Бот запущен...")
 bot.infinity_polling()
+
