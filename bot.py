@@ -11,7 +11,6 @@ user_data = {}
 request_counter = 1
 
 
-# Старт
 @bot.message_handler(commands=['start'])
 def start(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -19,12 +18,11 @@ def start(message):
     bot.send_message(message.chat.id, "Нажмите кнопку ниже:", reply_markup=markup)
 
 
-# Создание заявки
 @bot.message_handler(func=lambda message: message.text == "Создать заявку")
 def choose_pharmacy(message):
     markup = types.InlineKeyboardMarkup(row_width=5)
-
     buttons = []
+
     for i in range(1, 26):
         buttons.append(types.InlineKeyboardButton(f"{i}", callback_data=f"pharmacy_{i}"))
 
@@ -32,10 +30,10 @@ def choose_pharmacy(message):
     bot.send_message(message.chat.id, "Выберите аптеку:", reply_markup=markup)
 
 
-# Выбор аптеки
 @bot.callback_query_handler(func=lambda call: call.data.startswith("pharmacy_"))
 def choose_problem(call):
     pharmacy_number = call.data.split("_")[1]
+
     user_data[call.from_user.id] = {
         "pharmacy": pharmacy_number,
         "step": "problem"
@@ -55,10 +53,10 @@ def choose_problem(call):
     )
 
 
-# Выбор проблемы
 @bot.callback_query_handler(func=lambda call: call.data.startswith("problem_"))
 def ask_description(call):
     problem = call.data.split("_", 1)[1]
+
     user_data[call.from_user.id]["problem"] = problem
     user_data[call.from_user.id]["step"] = "description"
 
@@ -69,7 +67,6 @@ def ask_description(call):
     )
 
 
-# Получение текста
 @bot.message_handler(content_types=['text'])
 def handle_text(message):
 
@@ -78,34 +75,46 @@ def handle_text(message):
 
     user_id = message.from_user.id
 
-    if user_id in user_data and user_data[user_id].get("step") == "description":
-        user_data[user_id]["description"] = message.text
-        user_data[user_id]["step"] = "photo"
+    if user_id in user_data:
 
-        bot.send_message(message.chat.id, "Теперь отправьте фото проблемы (обязательно).")
+        step = user_data[user_id].get("step")
+
+        # Получаем описание
+        if step == "description":
+            user_data[user_id]["description"] = message.text
+            user_data[user_id]["step"] = "photo_or_no"
+
+            bot.send_message(
+                message.chat.id,
+                'Отправьте фото проблемы или напишите "нет"'
+            )
+
+        # Пользователь написал "нет"
+        elif step == "photo_or_no" and message.text.lower() == "нет":
+            send_request(user_id, message, photo=None)
+            bot.send_message(message.chat.id, "✅ Заявка отправлена")
+            user_data.pop(user_id)
 
 
-# Получение фото
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
 
     user_id = message.from_user.id
 
-    if user_id in user_data and user_data[user_id].get("step") == "photo":
+    if user_id in user_data and user_data[user_id].get("step") == "photo_or_no":
 
-        user_data[user_id]["photo"] = message.photo[-1].file_id
+        photo_id = message.photo[-1].file_id
+        send_request(user_id, message, photo=photo_id)
 
-        send_request(user_id, message)
-        bot.send_message(message.chat.id, "✅ Заявка отправлена")
+        bot.send_message(message.chat.id, "✅ Заявка отправлена с фото")
         user_data.pop(user_id)
 
 
-def send_request(user_id, message):
+def send_request(user_id, message, photo):
     global request_counter
 
     data = user_data[user_id]
 
-    # Имя пользователя
     first_name = message.from_user.first_name
     username = message.from_user.username
 
@@ -114,23 +123,25 @@ def send_request(user_id, message):
     else:
         user_name = first_name
 
-    # Дата и время
-    now = datetime.now().strftime("%d.%m.%Y %H:%M")
+    # Только дата
+    today = datetime.now().strftime("%d.%m.%Y")
 
     text = (
         f"📌 Заявка №{request_counter}\n\n"
         f"🏥 Аптека: {data['pharmacy']}\n"
         f"👤 Имя: {user_name}\n"
-        f"📅 Дата: {now}\n"
+        f"📅 Дата: {today}\n"
         f"⚠ Тип проблемы: {data['problem']}\n"
         f"📝 Описание: {data['description']}"
     )
 
-    bot.send_photo(GROUP_ID, data["photo"], caption=text)
+    if photo:
+        bot.send_photo(GROUP_ID, photo, caption=text)
+    else:
+        bot.send_message(GROUP_ID, text)
 
     request_counter += 1
 
 
 print("Бот запущен...")
 bot.infinity_polling()
-
