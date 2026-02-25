@@ -19,6 +19,7 @@ request_counter = 1
 def start(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("Создать заявку")
+    markup.add("Чек-лист")
 
     bot.send_message(
         message.chat.id,
@@ -280,21 +281,6 @@ CHECKLIST_ITEMS = [
 
 checklist_data = {}
 
-# Добавляем кнопку чек-листа в главное меню
-@bot.message_handler(commands=['start'])
-def start(message):
-
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-
-    markup.add("Создать заявку")
-    markup.add("Чек-лист")
-
-    bot.send_message(
-        message.chat.id,
-        "Нажмите кнопку ниже:",
-        reply_markup=markup
-    )
-
 # Открытие чек-листа
 @bot.message_handler(func=lambda message: message.text == "Чек-лист")
 def open_checklist(message):
@@ -379,4 +365,5 @@ def checklist_toggle(call):
 
 print("Бот запущен...")
 bot.infinity_polling()
+
 
