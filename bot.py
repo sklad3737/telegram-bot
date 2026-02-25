@@ -220,7 +220,6 @@ def send_request(user_id, message, photo):
         f"{hidden_mention}"
         f"📌 Заявка №{request_counter}\n"
         f"{urgency_text}\n"
-        f"{support_user}\n\n"
         f"🏥 Аптека: {pharmacy}\n"
         f"👤 Имя: {user_name}\n"
         f"📅 Дата: {today}\n"
@@ -291,4 +290,5 @@ def take_request(call):
 
 print("Бот запущен...")
 bot.infinity_polling()
+
 
