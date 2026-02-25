@@ -282,8 +282,11 @@ CHECKLIST_ITEMS = [
 checklist_data = {}
 
 
-@bot.message_handler(func=lambda message: message.text == "Чек-лист")
-def open_checklist(message):
+@bot.message_handler(content_types=['text'])
+def checklist_trigger(message):
+
+    if message.text != "Чек-лист":
+        return
 
     user_id = message.from_user.id
 
@@ -364,6 +367,7 @@ def checklist_toggle(call):
 
 print("Бот запущен...")
 bot.infinity_polling()
+
 
 
 
