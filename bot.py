@@ -249,7 +249,6 @@ def send_request(user_id, message, photo):
             GROUP_ID,
             text,
             reply_markup=markup,
-            parse_mode="HTML",
             parse_mode="HTML"
         )
 
@@ -292,3 +291,4 @@ def take_request(call):
 
 print("Бот запущен...")
 bot.infinity_polling()
+
