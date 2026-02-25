@@ -105,8 +105,10 @@ def handle_callback(call):
     data = call.data
     user_id = call.from_user.id
 
-    # ---- ЗАЯВКА ----
+    # ---------- ЗАЯВКА ----------
+
     if data.startswith("pharmacy_"):
+
         pharmacy = data.split("_")[1]
 
         user_data[user_id] = {
@@ -115,8 +117,12 @@ def handle_callback(call):
         }
 
         markup = types.InlineKeyboardMarkup()
+
         for p in ["Касса", "Компьютер", "Интернет", "1С", "Другое"]:
-            markup.add(types.InlineKeyboardButton(p, callback_data=f"problem_{p}"))
+            markup.add(types.InlineKeyboardButton(
+                p,
+                callback_data=f"problem_{p}"
+            ))
 
         bot.edit_message_text(
             "Выберите тип проблемы:",
@@ -126,6 +132,7 @@ def handle_callback(call):
         )
 
     elif data.startswith("problem_"):
+
         problem = data.split("_", 1)[1]
 
         user_data[user_id]["problem"] = problem
@@ -143,7 +150,8 @@ def handle_callback(call):
         )
 
     elif data.startswith("urgency_"):
-        urgency = data.split("_", 1)[1]
+
+        urgency = data.split("_")[1]
 
         user_data[user_id]["urgency"] = urgency
         user_data[user_id]["step"] = "description"
@@ -155,65 +163,77 @@ def handle_callback(call):
         )
 
     elif data.startswith("take_"):
-    
-        username = call.from_user.username
-        name = f"@{username}" if username else call.from_user.first_name
-    
+
+        name = call.from_user.username or call.from_user.first_name
+
         if call.message.caption:
             updated = call.message.caption + f"\n\n🛠 Принял: {name}"
-    
+
             bot.edit_message_caption(
-                chat_id=call.message.chat.id,
-                message_id=call.message.message_id,
+                call.message.chat.id,
+                call.message.message_id,
                 caption=updated,
                 reply_markup=None
             )
+
         else:
             updated = call.message.text + f"\n\n🛠 Принял: {name}"
-    
+
             bot.edit_message_text(
-                chat_id=call.message.chat.id,
-                message_id=call.message.message_id,
+                call.message.chat.id,
+                call.message.message_id,
                 text=updated,
                 reply_markup=None
             )
-        
-    # ---- ЧЕК-ЛИСТ ----
+
+    # ---------- ЧЕК-ЛИСТ ----------
+
     elif data.startswith("check_"):
 
         if user_id not in checklist_data:
             checklist_data[user_id] = {i: False for i in range(len(CHECKLIST_ITEMS))}
 
+        # Подтверждение чек-листа
         if data == "check_confirm":
-        
+
             result = []
+
             for i, checked in checklist_data[user_id].items():
                 if checked:
                     result.append(f"✅ {CHECKLIST_ITEMS[i]}")
-        
+
             text = "📋 Итог чек-листа\n\n"
             text += "\n".join(result) if result else "Нет отмеченных пунктов"
-        
-    # Отправляем в группу
-    bot.send_message(GROUP_ID, text)
 
-    # Убираем кнопки
-    bot.edit_message_reply_markup(
-        call.message.chat.id,
-        call.message.message_id,
-        reply_markup=None
-    )
+            # Отправляем итог в группу
+            bot.send_message(GROUP_ID, text)
 
-    # Чистим состояние
-    checklist_data.pop(user_id, None)
+            # Убираем кнопки
+            bot.edit_message_reply_markup(
+                call.message.chat.id,
+                call.message.message_id,
+                reply_markup=None
+            )
 
-    bot.answer_callback_query(call.id)
-    return
+            checklist_data.pop(user_id, None)
 
-        index = int(data.split("_")[1])
+            bot.answer_callback_query(call.id)
+            return
+
+        # Toggle пунктов
+        try:
+            index = int(data.split("_")[1])
+        except:
+            bot.answer_callback_query(call.id)
+            return
+
         checklist_data[user_id][index] = not checklist_data[user_id][index]
 
-        update_checklist(call.message.chat.id, call.message.message_id, user_id)
+        update_checklist(
+            call.message.chat.id,
+            call.message.message_id,
+            user_id
+        )
 
     bot.answer_callback_query(call.id)
 
@@ -308,4 +328,5 @@ def send_request(user_id, message, photo):
 bot.remove_webhook()
 print("Бот запущен...")
 bot.infinity_polling()
+
 
