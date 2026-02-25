@@ -155,29 +155,29 @@ def handle_callback(call):
         )
 
     elif data.startswith("take_"):
-        name = call.from_user.username or call.from_user.first_name
-
-        bot.edit_message_reply_markup(
-            call.message.chat.id,
-            call.message.message_id,
-            reply_markup=None
-        )
-
+    
+        username = call.from_user.username
+        name = f"@{username}" if username else call.from_user.first_name
+    
         if call.message.caption:
             updated = call.message.caption + f"\n\n🛠 Принял: {name}"
+    
             bot.edit_message_caption(
-                call.message.chat.id,
-                call.message.message_id,
-                caption=updated
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,
+                caption=updated,
+                reply_markup=None
             )
         else:
             updated = call.message.text + f"\n\n🛠 Принял: {name}"
+    
             bot.edit_message_text(
-                call.message.chat.id,
-                call.message.message_id,
-                text=updated
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,
+                text=updated,
+                reply_markup=None
             )
-
+        
     # ---- ЧЕК-ЛИСТ ----
     elif data.startswith("check_"):
 
@@ -185,18 +185,30 @@ def handle_callback(call):
             checklist_data[user_id] = {i: False for i in range(len(CHECKLIST_ITEMS))}
 
         if data == "check_confirm":
-
+        
             result = []
             for i, checked in checklist_data[user_id].items():
                 if checked:
                     result.append(f"✅ {CHECKLIST_ITEMS[i]}")
-
+        
             text = "📋 Итог чек-листа\n\n"
             text += "\n".join(result) if result else "Нет отмеченных пунктов"
+        
+    # Отправляем в группу
+    bot.send_message(GROUP_ID, text)
 
-            bot.send_message(call.message.chat.id, text)
-            bot.answer_callback_query(call.id)
-            return
+    # Убираем кнопки
+    bot.edit_message_reply_markup(
+        call.message.chat.id,
+        call.message.message_id,
+        reply_markup=None
+    )
+
+    # Чистим состояние
+    checklist_data.pop(user_id, None)
+
+    bot.answer_callback_query(call.id)
+    return
 
         index = int(data.split("_")[1])
         checklist_data[user_id][index] = not checklist_data[user_id][index]
@@ -296,3 +308,4 @@ def send_request(user_id, message, photo):
 bot.remove_webhook()
 print("Бот запущен...")
 bot.infinity_polling()
+
