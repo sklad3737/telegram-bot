@@ -170,9 +170,9 @@ def handle_callback(call):
             updated = call.message.caption + f"\n\n🛠 Принял: {name}"
 
             bot.edit_message_caption(
-                call.message.chat.id,
-                call.message.message_id,
-                caption=updated,
+                caption=updated_text,
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,
                 reply_markup=None
             )
 
@@ -180,9 +180,9 @@ def handle_callback(call):
             updated = call.message.text + f"\n\n🛠 Принял: {name}"
 
             bot.edit_message_text(
-                call.message.chat.id,
-                call.message.message_id,
-                text=updated,
+                text=updated_text,
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,
                 reply_markup=None
             )
 
@@ -328,5 +328,6 @@ def send_request(user_id, message, photo):
 bot.remove_webhook()
 print("Бот запущен...")
 bot.infinity_polling()
+
 
 
