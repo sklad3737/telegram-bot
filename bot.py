@@ -7,21 +7,8 @@ GROUP_ID = -1003783425494
 
 bot = telebot.TeleBot(TOKEN)
 
-# ---------------- MEMORY STORAGE ----------------
-
 user_data = {}
 request_counter = 1
-
-# Routing специалистов (скрытое назначение)
-support_map = {
-    "Интернет": "@JDN077",
-    "1С": "@JDN077",
-    "Касса": "@JDN077",
-    "Компьютер": "@JDN077",
-    "Другое": "@JDN077"
-}
-
-request_messages = {}
 
 # ---------------- START ----------------
 
@@ -198,19 +185,6 @@ def send_request(user_id, message, photo):
 
     today = datetime.now().strftime("%d.%m.%Y")
 
-    # Скрытое назначение специалиста
-    support_user = support_map.get(
-        data.get("problem"),
-        "@general_support"
-    )
-
-    # Hidden notification ping
-    hidden_mention = ""
-    
-    if support_user:
-        clean_username = support_user.replace("@", "")
-        hidden_mention = f'<a href="tg://user?id=0">\u200b</a>\n'
-
     urgency_text = "🔴 Срочно" if data.get("urgency") == "Срочно" else "🟢 Несрочно"
 
     pharmacy = data.get("pharmacy", "-")
@@ -218,9 +192,8 @@ def send_request(user_id, message, photo):
     description = data.get("description", "-")
 
     text = (
-        f"{hidden_mention}"
         f"📌 Заявка №{request_counter}\n"
-        f"{urgency_text}\n"
+        f"{urgency_text}\n\n"
         f"🏥 Аптека: {pharmacy}\n"
         f"👤 Имя: {user_name}\n"
         f"📅 Дата: {today}\n"
@@ -237,63 +210,22 @@ def send_request(user_id, message, photo):
     )
 
     if photo:
-        sent = bot.send_photo(
+        bot.send_photo(
             GROUP_ID,
             photo,
             caption=text,
-            reply_markup=markup,
-            parse_mode="HTML"
+            reply_markup=markup
         )
     else:
-        sent = bot.send_message(
+        bot.send_message(
             GROUP_ID,
             text,
-            reply_markup=markup,
-            parse_mode="HTML"
+            reply_markup=markup
         )
-
-    request_messages[request_counter] = sent.message_id
 
     request_counter += 1
 
-# ---------------- TAKE REQUEST ----------------
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith("take_"))
-def take_request(call):
-
-    username = call.from_user.username
-    name = f"@{username}" if username else call.from_user.first_name
-
-    bot.edit_message_reply_markup(
-        chat_id=call.message.chat.id,
-        message_id=call.message.message_id,
-        reply_markup=None
-    )
-
-    if call.message.caption:
-        updated_text = call.message.caption + f"\n\n🛠 В работе: {name}"
-
-        bot.edit_message_caption(
-            chat_id=call.message.chat.id,
-            message_id=call.message.message_id,
-            caption=updated_text,
-            parse_mode="HTML"
-        )
-    else:
-        updated_text = call.message.text + f"\n\n🛠 В работе: {name}"
-
-        bot.edit_message_text(
-            chat_id=call.message.chat.id,
-            message_id=call.message.message_id,
-            text=updated_text,
-            parse_mode="HTML"
-        )
+# ---------------- RUN ----------------
 
 print("Бот запущен...")
 bot.infinity_polling()
-
-
-
-
-
-
