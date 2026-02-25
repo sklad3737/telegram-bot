@@ -264,7 +264,7 @@ def take_request(call):
             parse_mode="HTML"
         )
         
-# ---------------- CHECKLIST MODULE ----------------
+# ================= CHECKLIST MODULE  =================
 
 CHECKLIST_ITEMS = [
     "Касса",
@@ -281,7 +281,7 @@ CHECKLIST_ITEMS = [
 
 checklist_data = {}
 
-# Открытие чек-листа
+
 @bot.message_handler(func=lambda message: message.text == "Чек-лист")
 def open_checklist(message):
 
@@ -297,11 +297,11 @@ def send_checklist(chat_id, user_id):
 
     markup = types.InlineKeyboardMarkup()
 
-    checklist_state = checklist_data[user_id]
+    state = checklist_data[user_id]
 
     for index, item in enumerate(CHECKLIST_ITEMS):
 
-        prefix = "✅ " if checklist_state.get(index) else ""
+        prefix = "✅ " if state.get(index) else ""
 
         markup.add(
             types.InlineKeyboardButton(
@@ -323,7 +323,7 @@ def send_checklist(chat_id, user_id):
         reply_markup=markup
     )
 
-# Toggle пункт чек-листа
+
 @bot.callback_query_handler(func=lambda call: call.data.startswith("check_"))
 def checklist_toggle(call):
 
@@ -332,7 +332,6 @@ def checklist_toggle(call):
     if user_id not in checklist_data:
         checklist_data[user_id] = {i: False for i in range(len(CHECKLIST_ITEMS))}
 
-    # Подтверждение чек-листа
     if call.data == "check_confirm":
 
         state = checklist_data[user_id]
@@ -351,7 +350,6 @@ def checklist_toggle(call):
 
         return
 
-    # Toggle logic
     try:
         index = int(call.data.split("_")[1])
     except:
@@ -363,8 +361,10 @@ def checklist_toggle(call):
 
     send_checklist(call.message.chat.id, user_id)
 
+
 print("Бот запущен...")
 bot.infinity_polling()
+
 
 
 
