@@ -7,10 +7,12 @@ GROUP_ID = -1003783425494
 
 bot = telebot.TeleBot(TOKEN)
 
+# ---------------- MEMORY STORAGE ----------------
+
 user_data = {}
 request_counter = 1
 
-# Routing специалистов
+# Routing специалистов (скрытое назначение)
 support_map = {
     "Интернет": "@JDN077",
     "1С": "@JDN077",
@@ -19,9 +21,7 @@ support_map = {
     "Другое": "@JDN077"
 }
 
-# Хранилище сообщений заявок
 request_messages = {}
-
 
 # ---------------- START ----------------
 
@@ -35,7 +35,6 @@ def start(message):
         "Нажмите кнопку ниже:",
         reply_markup=markup
     )
-
 
 # ---------------- CREATE REQUEST ----------------
 
@@ -58,7 +57,6 @@ def choose_pharmacy(message):
         "Выберите аптеку:",
         reply_markup=markup
     )
-
 
 # ---------------- PHARMACY ----------------
 
@@ -91,7 +89,6 @@ def choose_problem(call):
         reply_markup=markup
     )
 
-
 # ---------------- PROBLEM ----------------
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("problem_"))
@@ -113,7 +110,6 @@ def choose_urgency(call):
         reply_markup=markup
     )
 
-
 # ---------------- URGENCY ----------------
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("urgency_"))
@@ -129,7 +125,6 @@ def ask_description(call):
         call.message.chat.id,
         call.message.message_id
     )
-
 
 # ---------------- TEXT HANDLER ----------------
 
@@ -164,7 +159,6 @@ def handle_text(message):
 
         user_data.pop(user_id, None)
 
-
 # ---------------- PHOTO HANDLER ----------------
 
 @bot.message_handler(content_types=['photo'])
@@ -186,46 +180,52 @@ def handle_photo(message):
 
     user_data.pop(user_id, None)
 
-
 # ---------------- SEND REQUEST ----------------
 
 def send_request(user_id, message, photo):
 
     global request_counter
 
+    if user_id not in user_data:
+        return
+
     data = user_data[user_id]
 
-    first_name = message.from_user.first_name
+    first_name = message.from_user.first_name or ""
     username = message.from_user.username
 
     user_name = f"{first_name} (@{username})" if username else first_name
 
     today = datetime.now().strftime("%d.%m.%Y")
 
-    # Responsible specialist
+    # Скрытое назначение специалиста
     support_user = support_map.get(
-        data["problem"],
+        data.get("problem"),
         "@general_support"
     )
 
-    # Hidden mention (notification only)
+    # Hidden notification ping
     hidden_mention = ""
     if support_user:
-        username_clean = support_user.replace("@", "")
-        hidden_mention = f'<a href="https://t.me/{username_clean}">&#8203;</a>'
+        clean_username = support_user.replace("@", "")
+        hidden_mention = f'<a href="https://t.me/{clean_username}">&#8203;</a>'
 
-    urgency_text = "🔴 Срочно" if data["urgency"] == "Срочно" else "🟢 Несрочно"
+    urgency_text = "🔴 Срочно" if data.get("urgency") == "Срочно" else "🟢 Несрочно"
+
+    pharmacy = data.get("pharmacy", "-")
+    problem = data.get("problem", "-")
+    description = data.get("description", "-")
 
     text = (
         f"{hidden_mention}"
         f"📌 Заявка №{request_counter}\n"
         f"{urgency_text}\n"
         f"{support_user}\n\n"
-        f"🏥 Аптека: {data['pharmacy']}\n"
+        f"🏥 Аптека: {pharmacy}\n"
         f"👤 Имя: {user_name}\n"
         f"📅 Дата: {today}\n"
-        f"⚠ Тип проблемы: {data['problem']}\n"
-        f"📝 Описание: {data['description']}"
+        f"⚠ Тип проблемы: {problem}\n"
+        f"📝 Описание: {description}"
     )
 
     markup = types.InlineKeyboardMarkup()
@@ -249,13 +249,13 @@ def send_request(user_id, message, photo):
             GROUP_ID,
             text,
             reply_markup=markup,
+            parse_mode="HTML",
             parse_mode="HTML"
         )
 
     request_messages[request_counter] = sent.message_id
 
     request_counter += 1
-
 
 # ---------------- TAKE REQUEST ----------------
 
@@ -265,14 +265,12 @@ def take_request(call):
     username = call.from_user.username
     name = f"@{username}" if username else call.from_user.first_name
 
-    # Remove button
     bot.edit_message_reply_markup(
         chat_id=call.message.chat.id,
         message_id=call.message.message_id,
         reply_markup=None
     )
 
-    # Update message text/caption
     if call.message.caption:
         updated_text = call.message.caption + f"\n\n🛠 В работе: {name}"
 
@@ -291,7 +289,6 @@ def take_request(call):
             text=updated_text,
             parse_mode="HTML"
         )
-
 
 print("Бот запущен...")
 bot.infinity_polling()
