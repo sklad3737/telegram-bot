@@ -262,8 +262,121 @@ def take_request(call):
             text=updated_text,
             parse_mode="HTML"
         )
+        
+# ---------------- CHECKLIST MODULE ----------------
+
+CHECKLIST_ITEMS = [
+    "Касса",
+    "Компьютер",
+    "Интернет",
+    "1С",
+    "Сеть",
+    "Принтер",
+    "База",
+    "VPN",
+    "Сервер",
+    "Локализация проблемы"
+]
+
+checklist_data = {}
+
+# Добавляем кнопку чек-листа в главное меню
+@bot.message_handler(commands=['start'])
+def start(message):
+
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+
+    markup.add("Создать заявку")
+    markup.add("Чек-лист")
+
+    bot.send_message(
+        message.chat.id,
+        "Нажмите кнопку ниже:",
+        reply_markup=markup
+    )
+
+# Открытие чек-листа
+@bot.message_handler(func=lambda message: message.text == "Чек-лист")
+def open_checklist(message):
+
+    user_id = message.from_user.id
+
+    if user_id not in checklist_data:
+        checklist_data[user_id] = {i: False for i in range(len(CHECKLIST_ITEMS))}
+
+    send_checklist(message.chat.id, user_id)
+
+
+def send_checklist(chat_id, user_id):
+
+    markup = types.InlineKeyboardMarkup()
+
+    checklist_state = checklist_data[user_id]
+
+    for index, item in enumerate(CHECKLIST_ITEMS):
+
+        prefix = "✅ " if checklist_state.get(index) else ""
+
+        markup.add(
+            types.InlineKeyboardButton(
+                f"{prefix}{item}",
+                callback_data=f"check_{index}"
+            )
+        )
+
+    markup.add(
+        types.InlineKeyboardButton(
+            "✔ Подтвердить",
+            callback_data="check_confirm"
+        )
+    )
+
+    bot.send_message(
+        chat_id,
+        "📋 Чек-лист",
+        reply_markup=markup
+    )
+
+# Toggle пункт чек-листа
+@bot.callback_query_handler(func=lambda call: call.data.startswith("check_"))
+def checklist_toggle(call):
+
+    user_id = call.from_user.id
+
+    if user_id not in checklist_data:
+        checklist_data[user_id] = {i: False for i in range(len(CHECKLIST_ITEMS))}
+
+    if call.data == "check_confirm":
+
+        result = []
+
+        state = checklist_data[user_id]
+
+        for index, checked in state.items():
+            if checked:
+                result.append(f"✅ {CHECKLIST_ITEMS[index]}")
+
+        text = "📋 Итог чек-листа\n\n"
+
+        if result:
+            text += "\n".join(result)
+        else:
+            text += "Нет отмеченных пунктов"
+
+        bot.send_message(call.message.chat.id, text)
+
+        return
+
+    # toggle logic
+    index = int(call.data.split("_")[1])
+
+    checklist_data[user_id][index] = not checklist_data[user_id].get(index, False)
+
+    bot.delete_message(call.message.chat.id, call.message.message_id)
+
+    send_checklist(call.message.chat.id, user_id)
+
 
 print("Бот запущен...")
 bot.infinity_polling()
-
 
