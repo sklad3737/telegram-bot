@@ -206,9 +206,10 @@ def send_request(user_id, message, photo):
 
     # Hidden notification ping
     hidden_mention = ""
+    
     if support_user:
         clean_username = support_user.replace("@", "")
-        hidden_mention = f'<a href="https://t.me/{clean_username}">\u200b</a>\n'
+        hidden_mention = f'<a href="tg://user?id=0">\u200b</a>\n'
 
     urgency_text = "🔴 Срочно" if data.get("urgency") == "Срочно" else "🟢 Несрочно"
 
@@ -290,6 +291,7 @@ def take_request(call):
 
 print("Бот запущен...")
 bot.infinity_polling()
+
 
 
 
