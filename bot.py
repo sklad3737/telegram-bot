@@ -10,6 +10,7 @@ bot = telebot.TeleBot(TOKEN)
 # ---------------- MEMORY STORAGE ----------------
 
 user_data = {}
+request_messages = {}
 request_counter = 1
 
 # ---------------- START ----------------
@@ -217,14 +218,12 @@ def send_request(user_id, message, photo):
             photo,
             caption=text,
             reply_markup=markup,
-            parse_mode="HTML"
         )
     else:
         sent = bot.send_message(
             GROUP_ID,
             text,
             reply_markup=markup,
-            parse_mode="HTML"
         )
 
     request_messages[request_counter] = sent.message_id
@@ -246,7 +245,7 @@ def take_request(call):
     )
 
     if call.message.caption:
-        updated_text = call.message.caption + f"\n\n🛠 В работе: {name}"
+        updated_text = call.message.caption + f"\n\n🛠 Принял: {name}"
 
         bot.edit_message_caption(
             chat_id=call.message.chat.id,
@@ -266,4 +265,5 @@ def take_request(call):
 
 print("Бот запущен...")
 bot.infinity_polling()
+
 
