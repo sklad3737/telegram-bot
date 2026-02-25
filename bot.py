@@ -335,10 +335,10 @@ def checklist_toggle(call):
     if user_id not in checklist_data:
         checklist_data[user_id] = {i: False for i in range(len(CHECKLIST_ITEMS))}
 
+    # ---- Подтверждение ----
     if call.data == "check_confirm":
 
         state = checklist_data[user_id]
-
         result = []
 
         for index, checked in state.items():
@@ -346,27 +346,48 @@ def checklist_toggle(call):
                 result.append(f"✅ {CHECKLIST_ITEMS[index]}")
 
         text = "📋 Итог чек-листа\n\n"
-
         text += "\n".join(result) if result else "Нет отмеченных пунктов"
 
+        bot.answer_callback_query(call.id)
         bot.send_message(call.message.chat.id, text)
-
         return
 
-    try:
-        index = int(call.data.split("_")[1])
-    except:
-        return
+    # ---- Переключение пункта ----
+    index = int(call.data.split("_")[1])
+    checklist_data[user_id][index] = not checklist_data[user_id][index]
 
-    checklist_data[user_id][index] = not checklist_data[user_id].get(index, False)
+    # Перерисовываем ТУ ЖЕ клавиатуру
+    markup = types.InlineKeyboardMarkup()
 
-    bot.delete_message(call.message.chat.id, call.message.message_id)
+    state = checklist_data[user_id]
 
-    send_checklist(call.message.chat.id, user_id)
+    for i, item in enumerate(CHECKLIST_ITEMS):
+        prefix = "✅ " if state.get(i) else ""
+        markup.add(
+            types.InlineKeyboardButton(
+                f"{prefix}{item}",
+                callback_data=f"check_{i}"
+            )
+        )
 
+    markup.add(
+        types.InlineKeyboardButton(
+            "✔ Подтвердить",
+            callback_data="check_confirm"
+        )
+    )
+
+    bot.edit_message_reply_markup(
+        call.message.chat.id,
+        call.message.message_id,
+        reply_markup=markup
+    )
+
+    bot.answer_callback_query(call.id)
 
 print("Бот запущен...")
 bot.infinity_polling()
+
 
 
 
