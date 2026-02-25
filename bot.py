@@ -386,7 +386,9 @@ def checklist_toggle(call):
     bot.answer_callback_query(call.id)
 
 print("Бот запущен...")
+bot.remove_webhook()
 bot.infinity_polling()
+
 
 
 
