@@ -10,7 +10,7 @@ bot = telebot.TeleBot(TOKEN)
 user_data = {}
 request_counter = 1
 
-# Routing специалистов по типу проблемы
+# Routing специалистов
 support_map = {
     "Интернет": "@JDN077",
     "1С": "@JDN077",
@@ -19,36 +19,52 @@ support_map = {
     "Другое": "@JDN077"
 }
 
-# Хранение заявок для кнопок
+# Хранилище сообщений заявок
 request_messages = {}
 
+
+# ---------------- START ----------------
 
 @bot.message_handler(commands=['start'])
 def start(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("Создать заявку")
-    bot.send_message(message.chat.id, "Нажмите кнопку ниже:", reply_markup=markup)
 
+    bot.send_message(
+        message.chat.id,
+        "Нажмите кнопку ниже:",
+        reply_markup=markup
+    )
+
+
+# ---------------- CREATE REQUEST ----------------
 
 @bot.message_handler(func=lambda message: message.text == "Создать заявку")
 def choose_pharmacy(message):
+
     markup = types.InlineKeyboardMarkup(row_width=5)
 
-    buttons = []
-    for i in range(1, 26):
-        buttons.append(
-            types.InlineKeyboardButton(
-                f"{i}",
-                callback_data=f"pharmacy_{i}"
-            )
-        )
+    buttons = [
+        types.InlineKeyboardButton(
+            str(i),
+            callback_data=f"pharmacy_{i}"
+        ) for i in range(1, 26)
+    ]
 
     markup.add(*buttons)
-    bot.send_message(message.chat.id, "Выберите аптеку:", reply_markup=markup)
 
+    bot.send_message(
+        message.chat.id,
+        "Выберите аптеку:",
+        reply_markup=markup
+    )
+
+
+# ---------------- PHARMACY ----------------
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("pharmacy_"))
 def choose_problem(call):
+
     pharmacy_number = call.data.split("_")[1]
 
     user_data[call.from_user.id] = {
@@ -57,13 +73,14 @@ def choose_problem(call):
     }
 
     markup = types.InlineKeyboardMarkup()
+
     problems = ["Касса", "Компьютер", "Интернет", "1С", "Другое"]
 
-    for problem in problems:
+    for p in problems:
         markup.add(
             types.InlineKeyboardButton(
-                problem,
-                callback_data=f"problem_{problem}"
+                p,
+                callback_data=f"problem_{p}"
             )
         )
 
@@ -75,15 +92,17 @@ def choose_problem(call):
     )
 
 
+# ---------------- PROBLEM ----------------
+
 @bot.callback_query_handler(func=lambda call: call.data.startswith("problem_"))
 def choose_urgency(call):
+
     problem = call.data.split("_", 1)[1]
 
     user_data[call.from_user.id]["problem"] = problem
     user_data[call.from_user.id]["step"] = "urgency"
 
     markup = types.InlineKeyboardMarkup()
-
     markup.add(types.InlineKeyboardButton("🔴 Срочно", callback_data="urgency_Срочно"))
     markup.add(types.InlineKeyboardButton("🟢 Несрочно", callback_data="urgency_Несрочно"))
 
@@ -95,8 +114,11 @@ def choose_urgency(call):
     )
 
 
+# ---------------- URGENCY ----------------
+
 @bot.callback_query_handler(func=lambda call: call.data.startswith("urgency_"))
 def ask_description(call):
+
     urgency = call.data.split("_", 1)[1]
 
     user_data[call.from_user.id]["urgency"] = urgency
@@ -109,6 +131,8 @@ def ask_description(call):
     )
 
 
+# ---------------- TEXT HANDLER ----------------
+
 @bot.message_handler(content_types=['text'])
 def handle_text(message):
 
@@ -117,44 +141,53 @@ def handle_text(message):
 
     user_id = message.from_user.id
 
-    if user_id in user_data:
+    if user_id not in user_data:
+        return
 
-        step = user_data[user_id].get("step")
+    step = user_data[user_id].get("step")
 
-        if step == "description":
+    if step == "description":
 
-            user_data[user_id]["description"] = message.text
-            user_data[user_id]["step"] = "photo_or_no"
+        user_data[user_id]["description"] = message.text
+        user_data[user_id]["step"] = "photo_or_no"
 
-            bot.send_message(
-                message.chat.id,
-                'Отправьте фото проблемы или напишите "нет"'
-            )
+        bot.send_message(
+            message.chat.id,
+            'Отправьте фото проблемы или напишите "нет"'
+        )
 
-        elif step == "photo_or_no" and message.text.lower() == "нет":
+    elif step == "photo_or_no" and message.text.lower() == "нет":
 
-            send_request(user_id, message, photo=None)
+        send_request(user_id, message, photo=None)
 
-            bot.send_message(message.chat.id, "✅ Заявка отправлена")
+        bot.send_message(message.chat.id, "✅ Заявка отправлена")
 
-            user_data.pop(user_id)
+        user_data.pop(user_id, None)
 
+
+# ---------------- PHOTO HANDLER ----------------
 
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
 
     user_id = message.from_user.id
 
-    if user_id in user_data and user_data[user_id].get("step") == "photo_or_no":
+    if user_id not in user_data:
+        return
 
-        photo_id = message.photo[-1].file_id
+    if user_data[user_id].get("step") != "photo_or_no":
+        return
 
-        send_request(user_id, message, photo=photo_id)
+    photo_id = message.photo[-1].file_id
 
-        bot.send_message(message.chat.id, "✅ Заявка отправлена")
+    send_request(user_id, message, photo=photo_id)
 
-        user_data.pop(user_id)
+    bot.send_message(message.chat.id, "✅ Заявка отправлена")
 
+    user_data.pop(user_id, None)
+
+
+# ---------------- SEND REQUEST ----------------
 
 def send_request(user_id, message, photo):
 
@@ -169,15 +202,22 @@ def send_request(user_id, message, photo):
 
     today = datetime.now().strftime("%d.%m.%Y")
 
-    # Определение специалиста
+    # Responsible specialist
     support_user = support_map.get(
         data["problem"],
         "@general_support"
     )
 
+    # Hidden mention (notification only)
+    hidden_mention = ""
+    if support_user:
+        username_clean = support_user.replace("@", "")
+        hidden_mention = f'<a href="https://t.me/{username_clean}">&#8203;</a>'
+
     urgency_text = "🔴 Срочно" if data["urgency"] == "Срочно" else "🟢 Несрочно"
 
     text = (
+        f"{hidden_mention}"
         f"📌 Заявка №{request_counter}\n"
         f"{urgency_text}\n"
         f"{support_user}\n\n"
@@ -197,33 +237,60 @@ def send_request(user_id, message, photo):
     )
 
     if photo:
-        sent = bot.send_photo(GROUP_ID, photo, caption=text, reply_markup=markup)
+        sent = bot.send_photo(
+            GROUP_ID,
+            photo,
+            caption=text,
+            reply_markup=markup,
+            parse_mode="HTML"
+        )
     else:
-        sent = bot.send_message(GROUP_ID, text, reply_markup=markup)
+        sent = bot.send_message(
+            GROUP_ID,
+            text,
+            reply_markup=markup,
+            parse_mode="HTML"
+        )
 
     request_messages[request_counter] = sent.message_id
 
     request_counter += 1
 
 
+# ---------------- TAKE REQUEST ----------------
+
 @bot.callback_query_handler(func=lambda call: call.data.startswith("take_"))
 def take_request(call):
-
-    request_id = call.data.split("_")[1]
 
     username = call.from_user.username
     name = f"@{username}" if username else call.from_user.first_name
 
+    # Remove button
     bot.edit_message_reply_markup(
         chat_id=call.message.chat.id,
         message_id=call.message.message_id,
         reply_markup=None
     )
 
-    bot.send_message(
-        call.message.chat.id,
-        f"🛠 В работе: {name}"
-    )
+    # Update message text/caption
+    if call.message.caption:
+        updated_text = call.message.caption + f"\n\n🛠 В работе: {name}"
+
+        bot.edit_message_caption(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            caption=updated_text,
+            parse_mode="HTML"
+        )
+    else:
+        updated_text = call.message.text + f"\n\n🛠 В работе: {name}"
+
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            text=updated_text,
+            parse_mode="HTML"
+        )
 
 
 print("Бот запущен...")
