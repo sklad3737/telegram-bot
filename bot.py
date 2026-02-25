@@ -7,6 +7,8 @@ GROUP_ID = -1003783425494
 
 bot = telebot.TeleBot(TOKEN)
 
+# ---------------- MEMORY STORAGE ----------------
+
 user_data = {}
 request_counter = 1
 
@@ -135,7 +137,7 @@ def handle_text(message):
 
         bot.send_message(
             message.chat.id,
-            'Отправьте фото проблемы или напишите "нет"'
+            'Если нет фото, напишите слово "нет"'
         )
 
     elif step == "photo_or_no" and message.text.lower() == "нет":
@@ -193,7 +195,7 @@ def send_request(user_id, message, photo):
 
     text = (
         f"📌 Заявка №{request_counter}\n"
-        f"{urgency_text}\n\n"
+        f"{urgency_text}\n"
         f"🏥 Аптека: {pharmacy}\n"
         f"👤 Имя: {user_name}\n"
         f"📅 Дата: {today}\n"
@@ -204,28 +206,64 @@ def send_request(user_id, message, photo):
     markup = types.InlineKeyboardMarkup()
     markup.add(
         types.InlineKeyboardButton(
-            "✅ Взял в работу",
+            "✅ Принять",
             callback_data=f"take_{request_counter}"
         )
     )
 
     if photo:
-        bot.send_photo(
+        sent = bot.send_photo(
             GROUP_ID,
             photo,
             caption=text,
-            reply_markup=markup
+            reply_markup=markup,
+            parse_mode="HTML"
         )
     else:
-        bot.send_message(
+        sent = bot.send_message(
             GROUP_ID,
             text,
-            reply_markup=markup
+            reply_markup=markup,
+            parse_mode="HTML",
+            parse_mode="HTML"
         )
+
+    request_messages[request_counter] = sent.message_id
 
     request_counter += 1
 
-# ---------------- RUN ----------------
+# ---------------- TAKE REQUEST ----------------
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("take_"))
+def take_request(call):
+
+    username = call.from_user.username
+    name = f"@{username}" if username else call.from_user.first_name
+
+    bot.edit_message_reply_markup(
+        chat_id=call.message.chat.id,
+        message_id=call.message.message_id,
+        reply_markup=None
+    )
+
+    if call.message.caption:
+        updated_text = call.message.caption + f"\n\n🛠 В работе: {name}"
+
+        bot.edit_message_caption(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            caption=updated_text,
+            parse_mode="HTML"
+        )
+    else:
+        updated_text = call.message.text + f"\n\n🛠 Принял: {name}"
+
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            text=updated_text,
+            parse_mode="HTML"
+        )
 
 print("Бот запущен...")
 bot.infinity_polling()
