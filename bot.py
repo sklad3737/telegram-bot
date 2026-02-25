@@ -332,11 +332,12 @@ def checklist_toggle(call):
     if user_id not in checklist_data:
         checklist_data[user_id] = {i: False for i in range(len(CHECKLIST_ITEMS))}
 
+    # Подтверждение чек-листа
     if call.data == "check_confirm":
 
-        result = []
-
         state = checklist_data[user_id]
+
+        result = []
 
         for index, checked in state.items():
             if checked:
@@ -344,17 +345,17 @@ def checklist_toggle(call):
 
         text = "📋 Итог чек-листа\n\n"
 
-        if result:
-            text += "\n".join(result)
-        else:
-            text += "Нет отмеченных пунктов"
+        text += "\n".join(result) if result else "Нет отмеченных пунктов"
 
         bot.send_message(call.message.chat.id, text)
 
         return
 
-    # toggle logic
-    index = int(call.data.split("_")[1])
+    # Toggle logic
+    try:
+        index = int(call.data.split("_")[1])
+    except:
+        return
 
     checklist_data[user_id][index] = not checklist_data[user_id].get(index, False)
 
@@ -362,8 +363,8 @@ def checklist_toggle(call):
 
     send_checklist(call.message.chat.id, user_id)
 
-
 print("Бот запущен...")
 bot.infinity_polling()
+
 
 
