@@ -217,11 +217,11 @@ def send_request(user_id, message, photo):
     description = data.get("description", "-")
 
     text = (
-        f"{hidden_mention}"
-        
-        if support_user:
-            clean_username = support_user.replace("@", "")
-            hidden_mention = f'<a href="https://t.me/{clean_username}">\u200b</a>\n'
+        hidden_mention = ""
+
+if support_user:
+    clean_username = support_user.replace("@", "")
+    hidden_mention = f'<a href="https://t.me/{clean_username}">\u200b</a>\n'
         f"📌 Заявка №{request_counter}\n"
         f"{urgency_text}\n"
         f"🏥 Аптека: {pharmacy}\n"
@@ -294,6 +294,7 @@ def take_request(call):
 
 print("Бот запущен...")
 bot.infinity_polling()
+
 
 
 
