@@ -37,7 +37,7 @@ def choose_pharmacy(message):
         types.InlineKeyboardButton(
             str(i),
             callback_data=f"pharmacy_{i}"
-        ) for i in range(1, 26)
+        ) for i in range(0, 26)
     ]
 
     markup.add(*buttons)
@@ -62,7 +62,7 @@ def choose_problem(call):
 
     markup = types.InlineKeyboardMarkup()
 
-    problems = ["Касса", "Компьютер", "Интернет", "1С", "Другое"]
+    problems = ["Финансы/Касса", "1С/Компьютер", "Интернет", "Др. проблемы"]
 
     for p in problems:
         markup.add(
@@ -265,4 +265,5 @@ def take_request(call):
 
 print("Бот запущен...")
 bot.infinity_polling()
+
 
